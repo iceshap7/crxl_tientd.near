@@ -1,197 +1,297 @@
 import 'regenerator-runtime/runtime'
 import React from 'react'
-import { login, logout } from './utils'
+import {
+  Navbar,
+  Container,
+  Button,
+  Row,
+  Col,
+  Card,
+  Modal,
+  Form,
+  InputGroup,
+  FormControl,
+} from 'react-bootstrap'
+
 import './global.css'
+import logo from './assets/logo-white.svg'
 
-import getConfig from './config'
-const { networkId } = getConfig(process.env.NODE_ENV || 'development')
+import {
+  login,
+  logout,
+  uid,
+  convertToYoctoNear,
+  convertToNear,
+} from './utils'
 
-export default function App() {
-  // use React Hooks to store greeting in component state
-  const [greeting, set_greeting] = React.useState()
-
-  // when the user has not yet interacted with the form, disable the button
-  const [buttonDisabled, setButtonDisabled] = React.useState(true)
-
-  // after submitting the form, we want to show Notification
-  const [showNotification, setShowNotification] = React.useState(false)
-
-  // The useEffect hook can be used to fire side-effects during render
-  // Learn more: https://reactjs.org/docs/hooks-intro.html
-  React.useEffect(
-    () => {
-      // in this case, we only care to query the contract when signed in
-      if (window.walletConnection.isSignedIn()) {
-
-        // window.contract is set by initContract in index.js
-        window.contract.get_greeting({ account_id: window.accountId })
-          .then(greetingFromContract => {
-            set_greeting(greetingFromContract)
-          })
-      }
-    },
-
-    // The second argument to useEffect tells React when to re-run the effect
-    // Use an empty array to specify "only run on first render"
-    // This works because signing into NEAR Wallet reloads the page
-    []
-  )
-
-  // if not signed in, return early with sign-in prompt
-  if (!window.walletConnection.isSignedIn()) {
-    return (
-      <main>
-        <h1>Welcome to NEAR!</h1>
-        <p>
-          To make use of the NEAR blockchain, you need to sign in. The button
-          below will sign you in using NEAR Wallet.
-        </p>
-        <p>
-          By default, when your app runs in "development" mode, it connects
-          to a test network ("testnet") wallet. This works just like the main
-          network ("mainnet") wallet, but the NEAR Tokens on testnet aren't
-          convertible to other currencies – they're just for testing!
-        </p>
-        <p>
-          Go ahead and click the button below to try it out:
-        </p>
-        <p style={{ textAlign: 'center', marginTop: '2.5em' }}>
-          <button onClick={login}>Sign in</button>
-        </p>
-      </main>
-    )
-  }
-
+const MyModal = function ({heading, body, footer, show, size}) {
   return (
-    // use React Fragment, <>, to avoid wrapping elements in unnecessary divs
     <>
-      <button className="link" style={{ float: 'right' }} onClick={logout}>
-        Sign out
-      </button>
-      <main>
-        <h1>
-          <label
-            htmlFor="greeting"
-            style={{
-              color: 'var(--secondary)',
-              borderBottom: '2px solid var(--secondary)'
-            }}
-          >
-            {greeting}
-          </label>
-          {' '/* React trims whitespace around tags; insert literal space character when needed */}
-          {window.accountId}!
-        </h1>
-        <form onSubmit={async event => {
-          event.preventDefault()
-
-          // get elements from the form using their id attribute
-          const { fieldset, greeting } = event.target.elements
-
-          // hold onto new user-entered value from React's SynthenticEvent for use after `await` call
-          const newGreeting = greeting.value
-
-          // disable the form while the value gets updated on-chain
-          fieldset.disabled = true
-
-          try {
-            // make an update call to the smart contract
-            await window.contract.set_greeting({
-              // pass the value that the user entered in the greeting field
-              message: newGreeting
-            })
-          } catch (e) {
-            alert(
-              'Something went wrong! ' +
-              'Maybe you need to sign out and back in? ' +
-              'Check your browser console for more info.'
-            )
-            throw e
-          } finally {
-            // re-enable the form, whether the call succeeded or failed
-            fieldset.disabled = false
-          }
-
-          // update local `greeting` variable to match persisted value
-          set_greeting(newGreeting)
-
-          // show Notification
-          setShowNotification(true)
-
-          // remove Notification again after css animation completes
-          // this allows it to be shown again next time the form is submitted
-          setTimeout(() => {
-            setShowNotification(false)
-          }, 11000)
-        }}>
-          <fieldset id="fieldset">
-            <label
-              htmlFor="greeting"
-              style={{
-                display: 'block',
-                color: 'var(--gray)',
-                marginBottom: '0.5em'
-              }}
-            >
-              Change greeting
-            </label>
-            <div style={{ display: 'flex' }}>
-              <input
-                autoComplete="off"
-                defaultValue={greeting}
-                id="greeting"
-                onChange={e => setButtonDisabled(e.target.value === greeting)}
-                style={{ flex: 1 }}
-              />
-              <button
-                disabled={buttonDisabled}
-                style={{ borderRadius: '0 5px 5px 0' }}
-              >
-                Save
-              </button>
-            </div>
-          </fieldset>
-        </form>
-        <p>
-          Look at that! A Hello World app! This greeting is stored on the NEAR blockchain. Check it out:
-        </p>
-        <ol>
-          <li>
-            Look in <code>src/App.js</code> and <code>src/utils.js</code> – you'll see <code>get_greeting</code> and <code>set_greeting</code> being called on <code>contract</code>. What's this?
-          </li>
-          <li>
-            Ultimately, this <code>contract</code> code is defined in <code>assembly/main.ts</code> – this is the source code for your <a target="_blank" rel="noreferrer" href="https://docs.near.org/docs/develop/contracts/overview">smart contract</a>.</li>
-          <li>
-            When you run <code>yarn dev</code>, the code in <code>assembly/main.ts</code> gets deployed to the NEAR testnet. You can see how this happens by looking in <code>package.json</code> at the <code>scripts</code> section to find the <code>dev</code> command.</li>
-        </ol>
-        <hr />
-        <p>
-          To keep learning, check out <a target="_blank" rel="noreferrer" href="https://docs.near.org">the NEAR docs</a> or look through some <a target="_blank" rel="noreferrer" href="https://examples.near.org">example apps</a>.
-        </p>
-      </main>
-      {showNotification && <Notification />}
+      <Modal
+        show={show}
+        size={size}
+        centered>
+        <Modal.Header>
+          <Modal.Title>{heading}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>{body()}</Modal.Body>
+        <Modal.Footer>
+          {footer()}
+        </Modal.Footer>
+      </Modal>
     </>
   )
 }
 
-// this component gets rendered by App after the form is submitted
-function Notification() {
-  const urlPrefix = `https://explorer.${networkId}.near.org/accounts`
+export default function App() {
+  const isSignedIn = window.walletConnection.isSignedIn()
+  const [refreshData, setRefreshData] = React.useState(false)
+
+  const [posts, setPosts] = React.useState({})
+  const [totalPosts, setTotalPosts] = React.useState(0)
+  const [totalDonations, setTotalDonations] = React.useState(0)
+
+  const [showCreatePost, setShowCreatePost] = React.useState(false)
+  const createPostClose = () => setShowCreatePost(false)
+  const createPostShow = () => {
+    if(!isSignedIn) return login()
+
+    setShowCreatePost(true)
+  }
+
+  const donatePostId = React.useRef(false)
+  const [donateAmount, setDonateAmount] = React.useState('1')
+  const [showDonate, setShowDonate] = React.useState(false)
+  const donateClose = () => setShowDonate(false)
+  const donateShow = function (postId) {
+    if(!isSignedIn) return login()
+
+    donatePostId.current = postId
+    setShowDonate(true)
+  }
+
+  const [imageLink, setImageLink] = React.useState('')
+  const [companyName, setCompanyName] = React.useState('')
+  const [companyAddress, setCompanyAddress] = React.useState('')
+  const [yourQuote, setYourQuote] = React.useState('')
+
+  const createPost = async () => {
+    createPostClose()
+    let message = {
+      image_link: imageLink,
+      company_name: companyName,
+      company_address: companyAddress,
+      your_quote: yourQuote,
+      donation: 0,
+      created_by: '',
+    }
+    try {
+      await window.contract.create({
+        id: uid(),
+        message,
+      })
+    } catch (e) {
+      alert(
+        'Something went wrong! ' +
+        'Maybe you need to sign out and back in? ' +
+        'Check your browser console for more info.'
+      )
+      throw e
+    }
+    setRefreshData(prev => !prev)
+  }
+
+  const donate = async () => {
+    donateClose()
+    try {
+      await window.contract.donate({
+        post_id: donatePostId.current,
+      }, 300000000000000, convertToYoctoNear(donateAmount))
+    } catch (e) {
+      alert(
+        'Something went wrong! ' +
+        'Maybe you need to sign out and back in? ' +
+        'Check your browser console for more info.'
+      )
+      throw e
+    }
+  }
+
+  React.useEffect(
+    () => {
+      window.contract.list({ account_id: window.accountId })
+        .then(data => {
+          setPosts(JSON.parse(data))
+        })
+
+      window.contract.get_total_posts()
+        .then(data => {
+          setTotalPosts(data)
+        })
+
+      window.contract.get_total_donations()
+        .then(data => {
+          setTotalDonations(data)
+        })
+    }, [refreshData]
+  )
+
   return (
-    <aside>
-      <a target="_blank" rel="noreferrer" href={`${urlPrefix}/${window.accountId}`}>
-        {window.accountId}
-      </a>
-      {' '/* React trims whitespace around tags; insert literal space character when needed */}
-      called method: 'set_greeting' in contract:
-      {' '}
-      <a target="_blank" rel="noreferrer" href={`${urlPrefix}/${window.contract.contractId}`}>
-        {window.contract.contractId}
-      </a>
-      <footer>
-        <div>✔ Succeeded</div>
-        <div>Just now</div>
-      </footer>
-    </aside>
+    <main>
+      <Navbar bg="dark" variant="dark" className='sticky-top'>
+        <Container>
+          <Navbar.Brand href="">
+            <img
+              alt=""
+              src={logo}
+              width="50"
+              height="50"
+              className="d-inline-block align-middle" />
+            <Navbar.Text className='align-middle me-3'>Total posts: {totalPosts}</Navbar.Text>
+            <Navbar.Text className='align-middle'>Total donations: Ⓝ{convertToNear(totalDonations)}</Navbar.Text>
+          </Navbar.Brand>
+          <Navbar.Toggle />
+          <Navbar.Collapse className="justify-content-end">
+            <Navbar.Text>
+              {!isSignedIn &&
+                <Button variant="light" onClick={login}>Login</Button>
+              }
+
+              {isSignedIn &&
+                <>
+                  Signed in as: <a>{window.accountId}</a>{' '}
+                  <Button variant="light" onClick={logout}>Logout</Button>
+                </>
+              }
+            </Navbar.Text>
+          </Navbar.Collapse>
+        </Container>
+      </Navbar>
+
+      <div className='content-wrapper'>
+        <Row>
+        {Object.entries(posts).map((post, id) => {
+
+          return (
+            <Col className='col-md-3 mb-3' key={id}>
+              <Card>
+                <Card.Img variant="top" src={post[1].image_link} />
+                <Card.Body>
+                  <Card.Title>{post[1].company_name}</Card.Title>
+
+                  <Card.Text>{post[1].company_address}</Card.Text>
+
+                  <blockquote>{post[1].your_quote}</blockquote>
+
+                  <div className='text-end blockQuote'>
+                    <small>Created by: {post[1].created_by}</small>
+                  </div>
+                </Card.Body>
+                <Card.Footer>
+                  <Row>
+                    <Col className='col-8'>
+                      <small className="text-muted">Total donations: Ⓝ{convertToNear(post[1].donation)}</small>
+                    </Col>
+                    <Col className='col-4 text-end'>
+                      <Button
+                        className='btn-sm'
+                        onClick={() => donateShow(post[0])}>
+                          Donate
+                      </Button>
+                    </Col>
+                  </Row>
+                </Card.Footer>
+              </Card>
+            </Col>
+          )
+        })}
+        </Row>
+
+        <div className='fixed-bottom'>
+          <div className='content-wrapper'>
+            <Button
+              className='create-btn'
+              variant='danger'
+              onClick={createPostShow}>+</Button>
+          </div>
+        </div>
+      </div>
+
+      <MyModal
+        heading='Create new'
+        body={() => (
+          <Form>
+            <Form.Group className="mb-3">
+              <Form.Label>Image link</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="https://picsum.photos/500/500?id=1"
+                value={imageLink}
+                onChange={(e) => setImageLink(e.target.value)} />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Company name</Form.Label>
+              <Form.Control
+                type="text"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)} />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Address</Form.Label>
+              <Form.Control
+                type="text"
+                value={companyAddress}
+                onChange={(e) => setCompanyAddress(e.target.value)} />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Your quote</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={4}
+                value={yourQuote}
+                onChange={(e) => setYourQuote(e.target.value)} />
+            </Form.Group>
+          </Form>
+        )}
+        footer={() => (
+          <>
+            <Button variant="secondary" onClick={createPostClose}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={createPost}>
+              Submit
+            </Button>
+          </>
+        )}
+        show={showCreatePost} />
+
+      <MyModal
+        heading='Donate'
+        body={() => (
+          <InputGroup className="mb-3">
+            <InputGroup.Text>Ⓝ</InputGroup.Text>
+            <FormControl
+              type='number'
+              step={0.1}
+              value={donateAmount}
+              onChange={e => setDonateAmount(e.target.value)}
+            />
+          </InputGroup>
+        )}
+        footer={() => (
+          <>
+            <Button variant="secondary" onClick={donateClose}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={donate}>
+              Submit
+            </Button>
+          </>
+        )}
+        show={showDonate} />
+    </main>
   )
 }
